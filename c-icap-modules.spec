@@ -1,105 +1,82 @@
-%define modn c_icap_modules
-%define name c-icap-modules
-%define ver  0.5.5
+Summary:    Services for the c-icap server
+Name:       c-icap-modules
+Version:    0.5.5
+Release:    2%{?dist}
+License:    LGPLv2+
+URL:        http://c-icap.sourceforge.net/
 
-Summary         : Services for the c-icap server
-Name            : %{name}
-Version         : %{ver}
-Release         : 1%{?dist}%{?pext}
-License         : LGPLv2+
-Group           : System Environment/Daemons
-URL             : http://c-icap.sourceforge.net/
-Source0         : http://downloads.sourceforge.net/project/c-icap/%{name}/0.5.x/%{modn}-%{ver}.tar.gz
-Buildroot       : %{_tmppath}/%{name}-%{version}-%{release}-root
-Requires        : c-icap >= 0.5.2
-BuildRequires   : bzip2-devel, c-icap-devel >= 0.5.2, clamav-devel, libdb-devel, tar
-BuildRequires	: gcc make
-Vendor          : Tsantilas Christos <chtsanti@users.sourceforge.net>
+Source0:    http://downloads.sourceforge.net/project/c-icap/%{name}/0.5.x/c_icap_modules-%{version}.tar.gz
+
+BuildRequires:  bzip2-devel
+BuildRequires:  c-icap-devel >= %{version}
+BuildRequires:  clamav-devel
+BuildRequires:  gcc
+BuildRequires:  libdb-devel
+BuildRequires:  make
+
+Requires:   c-icap >= %{version}
 
 %description
 C-icap is an implementation of an ICAP server. It can be used with HTTP proxies
 that support the ICAP protocol to implement content adaptation and filtering
-services. This package provides additional service modules for c-icap.
+services. Most of the commercial HTTP proxies must support the ICAP protocol,
+the open source Squid 3.x proxy server supports it too.
 
 Currently the following services have been implemented for the c-icap server:
-- Web antivirus service, using the clamav open-source antivirus engine
-- basic URL filtering service
+  - virus_scan, an antivirus ICAP service
+  - url_check, an URL blacklist/whitelist icap service
+  - srv_content_filtering, a score based content filtering icap service
 
 %prep
-%setup -q -n %{modn}-%{ver}
+%autosetup -n c_icap_modules-%{version}
 
 %build
 %configure \
-  LDFLAGS="" \
-  CFLAGS="${RPM_OPT_FLAGS} -fno-strict-aliasing -I/usr/include/libdb" \
-  --enable-shared                                \
-  --with-clamav                                  \
+  --disable-static \
+  --enable-shared \
+  --enable-virus_scan-profiles \
+  --with-clamav \
   --with-bdb
 
-%{__make} %{?_smp_mflags}
+%make_build
 
 %install
-[ -n "${RPM_BUILD_ROOT}" -a "${RPM_BUILD_ROOT}" != "/" ] && %{__rm} -rf ${RPM_BUILD_ROOT}
-%{__mkdir_p} ${RPM_BUILD_ROOT}%{_sysconfdir}/c-icap
-%{__mkdir_p} ${RPM_BUILD_ROOT}%{_libdir}/c-icap
+mkdir -p %{buildroot}%{_sysconfdir}/c-icap
 
-%{__make} \
-  DESTDIR=${RPM_BUILD_ROOT} \
-  install
+%make_install
 
-%{__rm}   -f        ${RPM_BUILD_ROOT}%{_libdir}/c_icap/*.la
+rm -f %{buildroot}%{_libdir}/c_icap/*.la
 
-%clean
-[ -n "${RPM_BUILD_ROOT}" -a "${RPM_BUILD_ROOT}" != "/" ] && %{__rm} -rf ${RPM_BUILD_ROOT}
+# Do not add default configuration files
+rm -f %{buildroot}%{_sysconfdir}/c-icap/*.default
 
 %files
-%defattr(-,root,root)
-%doc COPYING INSTALL
+%license COPYING
 %attr(640,root,c-icap) %config(noreplace) %{_sysconfdir}/c-icap/*.conf
-%attr(640,root,c-icap) %{_sysconfdir}/c-icap/*.default
+%{_bindir}/c-icap-mods-sguardDB
 %{_libdir}/c_icap/clamav_mod.so
 %{_libdir}/c_icap/clamd_mod.so
 %{_libdir}/c_icap/srv_content_filtering.so
 %{_libdir}/c_icap/srv_url_check.so
 %{_libdir}/c_icap/virus_scan.so
-/usr/bin/c-icap-mods-sguardDB
-/usr/share/c_icap/templates/srv_content_filtering/en/BLOCK
-/usr/share/c_icap/templates/srv_url_check/en/DENY
-/usr/share/c_icap/templates/virus_scan/en/VIRUS_FOUND
-/usr/share/c_icap/templates/virus_scan/en/VIR_MODE_HEAD
-/usr/share/c_icap/templates/virus_scan/en/VIR_MODE_PROGRESS
-/usr/share/c_icap/templates/virus_scan/en/VIR_MODE_TAIL
-/usr/share/c_icap/templates/virus_scan/en/VIR_MODE_VIRUS_FOUND
-/usr/share/man/man8/c-icap-mods-sguardDB.8.gz
+%{_datadir}/c_icap/templates/srv_content_filtering/en/BLOCK
+%{_datadir}/c_icap/templates/srv_url_check/en/DENY
+%{_datadir}/c_icap/templates/virus_scan/en/VIRUS_FOUND
+%{_datadir}/c_icap/templates/virus_scan/en/VIR_MODE_HEAD
+%{_datadir}/c_icap/templates/virus_scan/en/VIR_MODE_PROGRESS
+%{_datadir}/c_icap/templates/virus_scan/en/VIR_MODE_TAIL
+%{_datadir}/c_icap/templates/virus_scan/en/VIR_MODE_VIRUS_FOUND
+%{_datadir}/man/man8/c-icap-mods-sguardDB.8.gz
 
 %changelog
+* Sat Aug 20 2022 Simone Caronni <negativo17@gmail.com> - 0.5.5-2
+- Clean up SPEC file, use packaging guidelines where possible and fix rpmlint
+  issues.
+- Trim changelog.
+- Do not add default configuration files to configuration directory.
+
 * Fri Mar 19 2021 Frank Crawford <frank@crawford.emu.id.au> - 0.5.5-1
 - Update to 0.5.5
 
 * Sun Mar 14 2021 Frank Crawford <frank@crawford.emu.id.au> - 0.5.4-1
 - Update to 0.5.4
-
-* Mon Jan 28 2019 Frank Crawford <frank@crawford.emu.id.au> - 0.5.3-1
-- Update to 0.5.3
-- Includes official update ofr ClamAV 0.101.X API change
-
-* Sun Jan 13 2019 Frank Crawford <frank@crawford.emu.id.au> - 0.5.2-2
-- Updated for ClamAV 0.101.1 API change
-
-* Mon Jan 07 2019 Frank Crawford <frank@crawford.emu.id.au> - 0.5.2-1
-- Update to 0.5.2
-
-* Thu Mar 16 2017 Marcin Skarbek <rpm@skarbek.name> - 0.4.4-1
-- Update to 0.4.4
-
-* Wed Jan 02 2013 Oliver Seeburger <oliver.seeburger@sundermeier-werkzeugbau.de> - 0.2.4-1
-- Update to 0.2.4
-
-* Fri Nov 16 2012 Oliver Seeburger <oliver.seeburger@sundermeier-werkzeugbau.de> - 0.2.3-1
-- Update to 0.2.3
-
-* Tue Sep 25 2012 Oliver Seeburger <oliver.seeburger@sundermeier-werkzeugbau.de> - 0.2.2-1
-- Update to 0.2.2
-
-* Tue Jul 10 2012 Oliver Seeburger <oliver.seeburger@sundermeier-werkzeugbau.de> - 0.2.1-1
-- Initial build for Fedora 17
